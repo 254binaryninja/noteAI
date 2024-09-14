@@ -23,5 +23,5 @@ Before you begin, ensure you have the following installed:
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/pdf-education-assistant.git
-   cd pdf-education-assistant
+   git clone https://github.com/254binaryninja/noteAI.git
+   cd noteAI
