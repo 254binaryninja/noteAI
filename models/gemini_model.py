@@ -54,7 +54,7 @@ vector_store = SupabaseVectorStore(
     client=supabase_client,
     table_name="documents",
     embedding=embeddings,
-    query_name="match_documents",
+    query_name="match_docs",
 )
 
 
@@ -73,12 +73,12 @@ def convert_to_stanalone(conv_history,question):
 def retreive_relevant_documents(standalone_question):
     ## Use vector store to search for relevant docs
     relevant_docs = vector_store.similarity_search(standalone_question, k=5)
-    return relevant_docs[0].page_content
+    return relevant_docs
 
 ## define function to generate final function
 def generate_answer(relevant_docs,questions):
     # combine content of the relevant document
-    context = "\n\n".join([doc.page_content for doc in relevant_docs])
+    context = relevant_docs
     # use llm chain to generate  final answer
     answer_chain = LLMChain(llm=llm, prompt=answerPrompt)
     return answer_chain.run({

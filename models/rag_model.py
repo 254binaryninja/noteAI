@@ -33,16 +33,14 @@ class CreateEmbeddings:
                     "embedding": embedding
                 })
             self.save_to_supabase(embedding_data)
+            return True
         except Exception as e:
             print(f"Error extracting text: {str(e)}")
 
     def save_to_supabase(self, embedding_data: List[Dict[str, Any]]) -> None:
         try:
-            response = supabase_client.table("documents").insert(embedding_data).execute()
-            if response.status_code == 201:
-                print("Embeddings created successfully")
-            else:
-                print(f"Error saving embeddings to supabase: {response.error_message}")
+            supabase_client.table("documents").insert(embedding_data).execute()
+            print("Data saved to Supabase")
         except Exception as e:
             print(f"Error saving to Supabase: {str(e)}")
 
