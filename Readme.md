@@ -1,7 +1,7 @@
 ## PDF Education Assistant
 
 # NoteAI
-This project is a web-based application built with Streamlit that allows users to chat with their PDFs to streamline their learning. The app leverages AI language models (such as Gemini or Ollama) to answer questions about the uploaded PDF, making the learning process interactive and efficient.
+This project is a web-based application built with Streamlit that allows users to chat with their PDFs to streamline their learning. The app leverages AI language models (such as Gemini or Ollama  offline models) to answer questions about the uploaded PDF, making the learning process interactive and efficient.
 
 ## Features
 - Upload PDF documents
