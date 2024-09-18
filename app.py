@@ -13,6 +13,9 @@ def main():
     if 'file_uploaded' not in st.session_state:
         st.session_state['file_uploaded'] = False
 
+    if 'note_value' not in st.session_state:
+        st.session_state['note_value'] = ""    
+
     if not st.session_state['file_uploaded']:
         uploaded_file = st.file_uploader("Choose a pdf file", type="pdf")
         if uploaded_file is not None:
@@ -23,6 +26,13 @@ def main():
 
     if st.session_state['file_uploaded']:
         st.info("PDF converted into Embeddings successfully")
+
+      # Add input field for note value 
+    note_value = st.text_input("Enter your note name for this session:",value=st.session_state['note_value'])
+    if note_value != st.session_state['note_value']:
+        st.session_state['note_value'] = note_value
+        if note_value == True:
+            st.success(f"Successfully selected {note_value}")
 
     if "messages" not in st.session_state:
         st.session_state.messages = []
@@ -36,7 +46,7 @@ def main():
        with st.chat_message("user"):
             st.markdown(prompt)
 
-       response = run_full_chain(conv_history, prompt)  
+       response = run_full_chain(conv_history, prompt,note_value)  
 
        st.session_state.messages.append({"role": "assistant", "content": response}) 
        with st.chat_message("assistant"):

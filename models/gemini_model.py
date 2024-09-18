@@ -6,6 +6,7 @@ from langchain.prompts import PromptTemplate
 from supabase.client import create_client
 from langchain.chains import RetrievalQA,LLMChain
 
+
 supabase_url = os.environ.get("SUPABASE_PROJECT_URL")
 supabase_key = os.environ.get("SUPABASE_API_KEY")
 
@@ -70,9 +71,23 @@ def convert_to_stanalone(conv_history,question):
 
 
 ## define function to retreive relevant docs from supabase
-def retreive_relevant_documents(standalone_question):
+from langchain.schema import Document
+
+def retreive_relevant_documents(standalone_question, notes_value):
     ## Use vector store to search for relevant docs
-    relevant_docs = vector_store.similarity_search(standalone_question, k=5)
+    query_embedding = embeddings.embed_query(standalone_question)
+    results = supabase_client.rpc(
+        'pdf_check',
+        {
+            'query_embedding': query_embedding,
+            'notes_value': notes_value
+        }
+    ).execute()
+
+    relevant_docs = [
+        Document(page_content=row['content'], metadata={'id': row['id']})
+        for row in results.data
+    ]
     return relevant_docs
 
 ## define function to generate final function
@@ -94,12 +109,12 @@ def append_conv_history(conv_history,user_question,ai_response):
 
 # run the entire chain
 
-def run_full_chain(conv_history,user_question):
+def run_full_chain(conv_history,user_question,notes_value):
     # Convert the user question to a standalone question
     standalone_question = convert_to_stanalone(conv_history, user_question)
     
     # Retrieve relevant documents based on the standalone question
-    relevant_docs = retreive_relevant_documents(standalone_question)
+    relevant_docs = retreive_relevant_documents(standalone_question,notes_value)
     
     # Generate the final answer using the retrieved documents and user question
     final_answer = generate_answer(relevant_docs, standalone_question)
