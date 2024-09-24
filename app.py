@@ -1,6 +1,8 @@
 import streamlit as st
 from models.rag_model import CreateEmbeddings
 from models.gemini_model import run_full_chain, conv_history
+from dotenv import load_dotenv
+load_dotenv() 
 
 def main():
     st.title("Note AI")
