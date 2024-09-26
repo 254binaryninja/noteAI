@@ -33,5 +33,36 @@ Before you begin, ensure you have the following installed:
    pip install -r requirements.txt
 
 4. Run app
-   ```bash
+   
    streamlit run app.py
+   
+
+## Supabase Configuration
+
+1. **Create a Supabase project:** If you don't have one already, sign up for a free account at [https://supabase.com/](https://supabase.com/) and create a new project.
+
+2. **Enable the pgvector extension:**
+   - Go to your Supabase project dashboard.
+   - Navigate to the **SQL Editor** tab.
+   - Run the following SQL command to enable the `pgvector` extension:
+
+     
+     CREATE EXTENSION vector;
+     
+
+3. **Create the `documents` table and `pdf_check` function:**
+   - In the same SQL Editor, run the following SQL commands:
+
+     
+     CREATE TABLE documents ( id uuid DEFAULT gen_random_uuid() PRIMARY KEY, content text, embedding vector(768) );
+
+     CREATE OR REPLACE FUNCTION pdf_check( query_embedding vector, notes_value text ) RETURNS TABLE ( id uuid, content text, similarity float ) AS $ BEGIN RETURN QUERY SELECT d.id, d.content, 1 - (d.embedding <=> query_embedding) AS similarity FROM documents d WHERE d.notes = notes_value ORDER BY d.embedding <=> query_embedding LIMIT 10; END; $ LANGUAGE plpgsql;
+     
+
+4. **Get your Supabase URL and API key:**
+   - Go to **Project Settings** -> **API** to find your Supabase project URL and API key. You'll need these to connect to your Supabase database from the application.
+
+5. Run app
+   
+   streamlit run app.py
+   
