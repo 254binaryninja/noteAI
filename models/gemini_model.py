@@ -5,10 +5,11 @@ from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain.prompts import PromptTemplate
 from supabase.client import create_client
 from langchain.chains import RetrievalQA,LLMChain
+from dotenv import load_dotenv
+load_dotenv() 
 
-
-supabase_url = os.environ.get("SUPABASE_PROJECT_URL")
-supabase_key = os.environ.get("SUPABASE_API_KEY")
+supabase_url = os.getenv("SUPABASE_PROJECT_URL")
+supabase_key = os.getenv("SUPABASE_API_KEY")
 
 
 llm = ChatGoogleGenerativeAI(
