@@ -52,12 +52,12 @@ answerPrompt = PromptTemplate(
     template=answerTemplate
 )
 
-vector_store = SupabaseVectorStore(
-    client=supabase_client,
-    table_name="documents",
-    embedding=embeddings,
-    query_name="match_docs",
-)
+# vector_store = SupabaseVectorStore(
+#     client=supabase_client,
+#     table_name="documents",
+#     embedding=embeddings,
+#     query_name="match_docs",
+# )
 
 
 ## 1 define function to turn prompt to standalone question
@@ -78,7 +78,7 @@ def retreive_relevant_documents(standalone_question, notes_value):
     ## Use vector store to search for relevant docs
     query_embedding = embeddings.embed_query(standalone_question)
     results = supabase_client.rpc(
-        'pdf_check',
+        'note_check',
         {
             'query_embedding': query_embedding,
             'notes_value': notes_value
