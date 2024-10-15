@@ -4,26 +4,28 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain.prompts import PromptTemplate
 from supabase.client import create_client
-from langchain.chains import RetrievalQA,LLMChain
+from langchain.chains import RetrievalQA, LLMChain
 from dotenv import load_dotenv
-load_dotenv() 
+from langchain.schema import Document
 
+load_dotenv()
+
+# Load Supabase credentials
 supabase_url = os.getenv("SUPABASE_PROJECT_URL")
 supabase_key = os.getenv("SUPABASE_API_KEY")
-
-
-llm = ChatGoogleGenerativeAI(
-  model='gemini-1.5-flash',
-    verbose=True,
-    google_api_key=os.getenv("GOOGLE_API_KEY")   
-)
-
-embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
-
 supabase_client = create_client(supabase_url, supabase_key)
+
+# Initialize LLM and Embeddings
+llm = ChatGoogleGenerativeAI(
+    model='gemini-1.5-flash',
+    verbose=True,
+    google_api_key=os.getenv("GOOGLE_API_KEY")
+)
+embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
 
 conv_history = []
 
+# Define Prompt Templates
 standaloneQuestionTemplate = """Given some conversation history (if any) and a question, convert the question to a standalone question.
 
 Conversation history: {conv_history}
@@ -52,38 +54,39 @@ answerPrompt = PromptTemplate(
     template=answerTemplate
 )
 
-# vector_store = SupabaseVectorStore(
-#     client=supabase_client,
-#     table_name="documents",
-#     embedding=embeddings,
-#     query_name="match_docs",
-# )
 
-
-## 1 define function to turn prompt to standalone question
-
-def convert_to_stanalone(conv_history,question):
-    ## use llm cahin to generate standalone question
-    standalone_question_chain  = LLMChain(llm=llm, prompt=standaloneQuestionPrompt)
+# Function to convert prompt to a standalone question
+def convert_to_standalone(conv_history, question):
+    standalone_question_chain = LLMChain(llm=llm, prompt=standaloneQuestionPrompt)
     return standalone_question_chain.run({
-         "conv_history": conv_history,
-         "question": question
-    }) 
+        "conv_history": conv_history,
+        "question": question
+    })
 
 
-## define function to retreive relevant docs from supabase
-from langchain.schema import Document
+# Function to retrieve relevant documents from Supabase based on the given unit
+import json
 
-def retreive_relevant_documents(standalone_question, notes_value):
-    ## Use vector store to search for relevant docs
+def retrieve_relevant_documents(standalone_question, unit):
+    # Use the vector store to search for relevant docs from the appropriate unit table
     query_embedding = embeddings.embed_query(standalone_question)
+    print(f"Query embedding: {json.dumps(query_embedding)}")
+
+    # Use the `match_documents` RPC function to search for documents in the specific unit table
     results = supabase_client.rpc(
-        'note_check',
+        'match_documents',
         {
             'query_embedding': query_embedding,
-            'notes_value': notes_value
+            'match_threshold': 0.3,  # Adjust the threshold as needed
+            'match_count': 10,  # Adjust the number of documents to retrieve
+            'table_name': f'pdf_embeddings_unit_{unit}'
         }
     ).execute()
+
+    if not results.data:
+        print("No documents retrieved.")
+    else:
+        print(f"Retrieved documents: {json.dumps(results.data)}")
 
     relevant_docs = [
         Document(page_content=row['content'], metadata={'id': row['id']})
@@ -91,36 +94,45 @@ def retreive_relevant_documents(standalone_question, notes_value):
     ]
     return relevant_docs
 
-## define function to generate final function
-def generate_answer(relevant_docs,questions):
-    # combine content of the relevant document
-    context = relevant_docs
-    # use llm chain to generate  final answer
+# Function to generate the final answer using relevant documents
+def generate_answer(relevant_docs, question):
+    # Combine the content of the relevant documents
+    context = "\n".join([doc.page_content for doc in relevant_docs])
+
+    # Use the LLM chain to generate the final answer
     answer_chain = LLMChain(llm=llm, prompt=answerPrompt)
     return answer_chain.run({
-        "context":context,
-        "question":questions
+        "context": context,
+        "question": question
     })
 
-def append_conv_history(conv_history,user_question,ai_response):
+
+# Append conversation history with the human question and AI response
+def append_conv_history(conv_history, user_question, ai_response):
     conv_history.append({
-        "human":user_question,
-        "AI":ai_response
+        "human": user_question,
+        "AI": ai_response
     })
 
-# run the entire chain
 
-def run_full_chain(conv_history,user_question,notes_value):
-    # Convert the user question to a standalone question
-    standalone_question = convert_to_stanalone(conv_history, user_question)
-    
-    # Retrieve relevant documents based on the standalone question
-    relevant_docs = retreive_relevant_documents(standalone_question,notes_value)
-    
-    # Generate the final answer using the retrieved documents and user question
+# Run the full chain: Convert, retrieve, and generate
+def run_full_chain(conv_history, user_question, unit):
+    print("Starting RAG process...")
+
+    # Convert to standalone question
+    standalone_question = convert_to_standalone(conv_history, user_question)
+    print(f"Standalone question: {standalone_question}")
+
+    # Retrieve relevant documents
+    relevant_docs = retrieve_relevant_documents(standalone_question, unit)
+    print(f"Retrieved {len(relevant_docs)} relevant documents")
+
+    # Generate the final answer
     final_answer = generate_answer(relevant_docs, standalone_question)
-    
-    # Append the user's question and AI's response to the conversation history
+    print(f"Generated answer: {final_answer}")
+
+    # Append conversation history
     append_conv_history(conv_history, user_question, final_answer)
-    
+    print("Updated conversation history")
+
     return final_answer
