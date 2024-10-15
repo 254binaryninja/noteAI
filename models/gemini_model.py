@@ -7,6 +7,8 @@ from supabase.client import create_client
 from langchain.chains import RetrievalQA, LLMChain
 from dotenv import load_dotenv
 from langchain.schema import Document
+from utils.config import draw_graph
+import ast
 
 load_dotenv()
 
@@ -39,7 +41,10 @@ standaloneQuestionPrompt = PromptTemplate(
     template=standaloneQuestionTemplate
 )
 
-answerTemplate = """You are a friendly and knowledgeable AI teacher, always excited to help students learn. Use the following information to answer the user's question in a supportive and encouraging manner. If you're not sure about something, it's okay to say so and suggest ways to find out more.
+answerTemplate = """
+You are a friendly and knowledgeable AI teacher, always excited to help students learn. Use the following information to answer the user's question in a supportive and encouraging manner. If you're not sure about something, it's okay to say so and suggest ways to find out more.
+
+If you think a graph could help explain the concept, you can say something like: "Draw graph with data: [(x1, y1), (x2, y2), ...]".
 
 Let's explore this topic together!
 
@@ -115,7 +120,6 @@ def append_conv_history(conv_history, user_question, ai_response):
     })
 
 
-# Run the full chain: Convert, retrieve, and generate
 def run_full_chain(conv_history, user_question, unit):
     print("Starting RAG process...")
 
@@ -130,6 +134,20 @@ def run_full_chain(conv_history, user_question, unit):
     # Generate the final answer
     final_answer = generate_answer(relevant_docs, standalone_question)
     print(f"Generated answer: {final_answer}")
+
+    # Check if the final answer requests drawing a graph
+    if "Draw graph with data:" in final_answer:
+        # Extract the data part from the response
+        try:
+            # Assuming the response includes something like "Draw graph with data: [(x1, y1), (x2, y2), ...]"
+            data_str = final_answer.split("Draw graph with data:")[-1].strip()
+            data_list = ast.literal_eval(data_str)
+
+            # Draw the graph using the extracted data
+            draw_graph(data_list)
+            print("Graph drawn successfully")
+        except Exception as e:
+            print(f"Error parsing graph data: {e}")
 
     # Append conversation history
     append_conv_history(conv_history, user_question, final_answer)
